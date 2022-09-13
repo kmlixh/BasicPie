@@ -115,7 +115,8 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			RenderJson(c, Err())
 		}
 		results = reflect.New(reflect.SliceOf(d.Type)).Interface()
-
+		page := int64(0)
+		pageSize := int64(0)
 		maps, er := GetCondtionMapFromRst(c)
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
@@ -123,15 +124,34 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		}
 		orderByKey, ook := d.TableModel.Columns()[0], true
 		orderByData, odk := maps["id"]
-		mode, otk := maps["mode"].(string)
-		pSize, okp := maps["pageSize"].(string)
+		mode, otk := maps["mode"]
+		pSize, okp := maps["pageSize"]
 		if !okp {
 			pSize = "20"
 		}
 		if okp {
 			delete(maps, "pageSize")
+			switch pSize.(type) {
+			case string:
+				t, er := strconv.Atoi(pSize.(string))
+				if er == nil {
+					pageSize = int64(t)
+				}
+			case float32:
+				pageSize = int64(pSize.(float32))
+			case float64:
+				pageSize = int64(pSize.(float64))
+			case int32:
+				pageSize = int64(pSize.(int32))
+			case int:
+				pageSize = int64(pSize.(int))
+			case int16:
+				pageSize = int64(pSize.(int16))
+			case int8:
+				pageSize = int64(pSize.(int8))
+			}
 		}
-		pageSize, er := strconv.Atoi(pSize)
+
 		if er != nil {
 			pageSize = 20
 		}
@@ -153,14 +173,33 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results)
 			RenderJson(c, Ok(results).Set("pageSize", pageSize))
 		} else {
-			pTxt, ok := maps["page"].(string)
+			pTxt, ok := maps["page"]
 			if !ok {
-				pTxt = "1"
+				page = 1
 			} else {
 				delete(maps, "page")
+				switch pTxt.(type) {
+				case string:
+					t, er := strconv.Atoi(pTxt.(string))
+					if er == nil {
+						page = int64(t)
+					}
+				case float32:
+					page = int64(pTxt.(float32))
+				case float64:
+					page = int64(pTxt.(float64))
+				case int32:
+					page = int64(pTxt.(int32))
+				case int:
+					page = int64(pTxt.(int))
+				case int16:
+					page = int64(pTxt.(int16))
+				case int8:
+					page = int64(pTxt.(int8))
+				}
+
 			}
 
-			page, er := strconv.Atoi(pTxt)
 			if er != nil {
 				page = 1
 			}
