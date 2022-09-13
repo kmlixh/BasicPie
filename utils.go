@@ -19,7 +19,7 @@ func MD5(v string) string {
 	m.Write(d)
 	return hex.EncodeToString(m.Sum(nil))
 }
-func getPrivateKey(path string) (*rsa.PrivateKey, error) {
+func GetPrivateKey(path string) (*rsa.PrivateKey, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func getPrivateKey(path string) (*rsa.PrivateKey, error) {
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes) //还原数据
 	return privateKey, err
 }
-func unMarshalJson(c *gin.Context, i interface{}) {
+func UnMarshalJson(c *gin.Context, i interface{}) {
 	bbs, er := io.ReadAll(c.Request.Body)
 	if er != nil {
 		panic(er)
@@ -40,7 +40,7 @@ func unMarshalJson(c *gin.Context, i interface{}) {
 	fmt.Println(string(bbs))
 	json.Unmarshal(bbs, i)
 }
-func getPublicKey(path string) (*rsa.PublicKey, error) {
+func GetPublicKey(path string) (*rsa.PublicKey, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

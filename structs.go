@@ -53,6 +53,6 @@ func Err() CodeMsg {
 func Err2(code int, msg string) CodeMsg {
 	return RawCodeMsg(code, msg, nil)
 }
-func renderJson(c *gin.Context, data interface{}) {
+func RenderJson(c *gin.Context, data interface{}) {
 	c.JSON(200, data)
 }

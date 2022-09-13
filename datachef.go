@@ -78,47 +78,47 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		var result interface{}
 		maps, er := GetCondtionMapFromRst(c)
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
 		cnd := gom.MapToCondition(maps)
 		result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface())
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 		} else {
-			renderJson(c, Ok(result))
+			RenderJson(c, Ok(result))
 		}
 	})
 	route.Any("/"+name+"/delete", func(c *gin.Context) {
 		maps, er := GetCondtionMapFromRst(c)
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
 		key := d.TableModel.Columns()[0]
 		val, ok := maps[key]
 		if !ok {
-			renderJson(c, Err2(404, "not find key"))
+			RenderJson(c, Err2(404, "not find key"))
 			return
 		}
 		cnd := gom.MapToCondition(map[string]interface{}{key: val})
 		i, _, er := d.Db.Where(cnd).Delete(reflect.New(d.Type).Interface())
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 		} else {
-			renderJson(c, Ok(i))
+			RenderJson(c, Ok(i))
 		}
 	})
 	route.Any("/"+name+"/list", func(c *gin.Context) {
 		var results interface{}
 		if !d.TableModel.PrimaryAuto() {
-			renderJson(c, Err())
+			RenderJson(c, Err())
 		}
 		results = reflect.New(reflect.SliceOf(d.Type)).Interface()
 
 		maps, er := GetCondtionMapFromRst(c)
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
 		orderByKey, ook := d.TableModel.Columns()[0], true
@@ -151,7 +151,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 				cnd.Lt(orderByKey, orderByData)
 			}
 			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results)
-			renderJson(c, Ok(results).Set("pageSize", pageSize))
+			RenderJson(c, Ok(results).Set("pageSize", pageSize))
 		} else {
 			pTxt, ok := maps["page"].(string)
 			if !ok {
@@ -177,12 +177,12 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			totalPages = count/int64(pageSize) + z
 			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).Select(results)
 			if er != nil {
-				renderJson(c, Err2(500, er.Error()))
+				RenderJson(c, Err2(500, er.Error()))
 				return
 			}
 			codeMsg := Ok()
 			codeMsg["data"] = map[string]interface{}{"list": results, "page": page, "pageSize": pageSize, "totalPages": totalPages}
-			renderJson(c, codeMsg)
+			RenderJson(c, codeMsg)
 		}
 
 	})
@@ -193,16 +193,16 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		isInsert := false
 		i, er = d.defaultJsonParser(c)
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
 		if d.BeforeSave == nil {
-			renderJson(c, Err2(500, "please add a [BeforeSaveFunc]"))
+			RenderJson(c, Err2(500, "please add a [BeforeSaveFunc]"))
 			return
 		}
 		isInsert, i, er = d.BeforeSave(c, i)
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
 		if isInsert {
@@ -211,10 +211,10 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			_, _, er = d.Db.Update(i)
 		}
 		if er != nil {
-			renderJson(c, Err2(500, er.Error()))
+			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
-		renderJson(c, Ok(id))
+		RenderJson(c, Ok(id))
 	})
 }
 func (d DataChef) defaultJsonParser(c *gin.Context) (interface{}, error) {
