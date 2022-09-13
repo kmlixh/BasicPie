@@ -1,4 +1,4 @@
-package BasicPie
+package basicPie
 
 import (
 	"encoding/json"

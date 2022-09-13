@@ -1,4 +1,4 @@
-module github.com/kmlixh/BasicPie
+module github.com/kmlixh/basicPie
 
 go 1.19
 

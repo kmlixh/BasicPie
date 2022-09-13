@@ -1,4 +1,4 @@
-package BasicPie
+package basicPie
 
 import "github.com/gin-gonic/gin"
 
