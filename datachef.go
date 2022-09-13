@@ -20,15 +20,21 @@ type DataChef struct {
 	BeforeSave
 }
 
-func generateChef(typ reflect.Type, model gom.TableModel, db *gom.DB, save BeforeSave) *DataChef {
+func GenerateChef(i interface{}, db *gom.DB, save BeforeSave) *DataChef {
+	typ := reflect.TypeOf(i)
+	model, er := gom.GetTableModel(i)
+	if er != nil {
+		panic(er)
+	}
 	return &DataChef{typ, model, db, save}
 }
 func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
-	maps := make(map[string]interface{})
+	var maps map[string]interface{}
 	var er error
 	if c.Request.Method == "POST" {
 		contentType := c.GetHeader("Content-Type")
 		if strings.Contains(contentType, "application/x-www-form-urlencoded") {
+			maps = make(map[string]interface{})
 			er = c.Request.ParseForm()
 			if er != nil {
 				return nil, er
@@ -47,9 +53,10 @@ func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 			if er != nil {
 				return nil, er
 			}
-			er = json.Unmarshal(bbs, maps)
+			er = json.Unmarshal(bbs, &maps)
 		}
 	} else if c.Request.Method == http.MethodGet {
+		maps = make(map[string]interface{})
 		values := c.Request.URL.Query()
 		for k, v := range values {
 			if len(v) == 1 {
@@ -88,7 +95,13 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			renderJson(c, Err2(500, er.Error()))
 			return
 		}
-		cnd := gom.MapToCondition(maps)
+		key := d.TableModel.Columns()[0]
+		val, ok := maps[key]
+		if !ok {
+			renderJson(c, Err2(404, "not find key"))
+			return
+		}
+		cnd := gom.MapToCondition(map[string]interface{}{key: val})
 		i, _, er := d.Db.Where(cnd).Delete(reflect.New(d.Type).Interface())
 		if er != nil {
 			renderJson(c, Err2(500, er.Error()))
@@ -108,10 +121,13 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			renderJson(c, Err2(500, er.Error()))
 			return
 		}
-		orderByKey, ook := maps["oBKey"].(string)
-		orderByData, odk := maps["oBData"]
-		orderByType, otk := maps["oBType"].(string)
+		orderByKey, ook := d.TableModel.Columns()[0], true
+		orderByData, odk := maps["id"]
+		mode, otk := maps["mode"].(string)
 		pSize, okp := maps["pageSize"].(string)
+		if !okp {
+			pSize = "20"
+		}
 		if okp {
 			delete(maps, "pageSize")
 		}
@@ -119,22 +135,19 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		if er != nil {
 			pageSize = 20
 		}
-		if !okp {
-			pSize = "20"
-		}
+
 		if ook && otk {
 			//以排序值滚动获取数据
-			delete(maps, "oBKey")
-			delete(maps, "oBData")
-			delete(maps, "oBType")
+			delete(maps, "id")
+			delete(maps, "mode")
 
 			cnd := gom.MapToCondition(maps)
 			orderType := gom.Desc
-			if odk && orderByType == "new" {
+			if odk && mode == "1" {
 				orderType = gom.Asc
 				cnd.Gt(orderByKey, orderByData)
 			}
-			if odk && orderByType == "old" {
+			if odk && mode == "0" {
 				cnd.Lt(orderByKey, orderByData)
 			}
 			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results)
@@ -142,14 +155,14 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		} else {
 			pTxt, ok := maps["page"].(string)
 			if !ok {
-				pTxt = "0"
+				pTxt = "1"
 			} else {
 				delete(maps, "page")
 			}
 
 			page, er := strconv.Atoi(pTxt)
 			if er != nil {
-				page = 0
+				page = 1
 			}
 
 			totalPages := int64(0)
