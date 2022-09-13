@@ -113,6 +113,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		var results interface{}
 		if !d.TableModel.PrimaryAuto() {
 			RenderJson(c, Err())
+			return
 		}
 		results = reflect.New(reflect.SliceOf(d.Type)).Interface()
 		page := int64(0)
