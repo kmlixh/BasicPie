@@ -12,22 +12,24 @@ import (
 )
 
 type BeforeSave func(c *gin.Context, i interface{}) (bool, interface{}, error)
+type CustomSave func(c *gin.Context) bool
 
 type DataChef struct {
 	Type       reflect.Type
 	TableModel gom.TableModel
 	Db         *gom.DB
 	BeforeSave
+	CustomSave
 	Columns []string
 }
 
-func GenerateChef(i interface{}, db *gom.DB, save BeforeSave, cols []string) *DataChef {
+func GenerateChef(i interface{}, db *gom.DB, save BeforeSave, custom CustomSave, cols []string) *DataChef {
 	typ := reflect.TypeOf(i)
 	model, er := gom.GetTableModel(i)
 	if er != nil {
 		panic(er)
 	}
-	return &DataChef{typ, model, db, save, cols}
+	return &DataChef{typ, model, db, save, custom, cols}
 }
 func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 	var maps map[string]interface{}
@@ -236,6 +238,14 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 
 	})
 	route.POST("/"+name+"/save", func(c *gin.Context) {
+		if d.CustomSave != nil {
+			result := d.CustomSave(c)
+			if result {
+				RenderJson(c, Ok())
+			} else {
+				RenderJson(c, Err())
+			}
+		}
 		var i interface{}
 		var er error
 		id := int64(0)
