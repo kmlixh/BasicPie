@@ -161,7 +161,10 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		if er != nil {
 			pageSize = 20
 		}
-
+		var cols []string
+		if len(d.Columns) > 0 {
+			cols = d.Columns
+		}
 		if ook && otk {
 			//以排序值滚动获取数据
 			delete(maps, "id")
@@ -176,10 +179,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			if odk && mode == "0" {
 				cnd.Lt(orderByKey, orderByData)
 			}
-			var cols []string
-			if len(d.Columns) > 0 {
-				cols = d.Columns
-			}
+
 			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results, cols...)
 			RenderJson(c, Ok(results).Set("pageSize", pageSize))
 		} else {
@@ -224,7 +224,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 				z = 1
 			}
 			totalPages = count/int64(pageSize) + z
-			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).Select(results)
+			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).Select(results, cols...)
 			if er != nil {
 				RenderJson(c, Err2(500, er.Error()))
 				return
