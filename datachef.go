@@ -18,15 +18,16 @@ type DataChef struct {
 	TableModel gom.TableModel
 	Db         *gom.DB
 	BeforeSave
+	Columns []string
 }
 
-func GenerateChef(i interface{}, db *gom.DB, save BeforeSave) *DataChef {
+func GenerateChef(i interface{}, db *gom.DB, save BeforeSave, cols []string) *DataChef {
 	typ := reflect.TypeOf(i)
 	model, er := gom.GetTableModel(i)
 	if er != nil {
 		panic(er)
 	}
-	return &DataChef{typ, model, db, save}
+	return &DataChef{typ, model, db, save, cols}
 }
 func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 	var maps map[string]interface{}
@@ -82,7 +83,11 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			return
 		}
 		cnd := gom.MapToCondition(maps)
-		result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface())
+		var cols []string
+		if len(d.Columns) > 0 {
+			cols = d.Columns
+		}
+		result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface(), cols...)
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
 		} else {
@@ -171,7 +176,11 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			if odk && mode == "0" {
 				cnd.Lt(orderByKey, orderByData)
 			}
-			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results)
+			var cols []string
+			if len(d.Columns) > 0 {
+				cols = d.Columns
+			}
+			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results, cols...)
 			RenderJson(c, Ok(results).Set("pageSize", pageSize))
 		} else {
 			pTxt, ok := maps["page"]
