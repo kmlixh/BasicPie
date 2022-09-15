@@ -85,11 +85,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			return
 		}
 		cnd := gom.MapToCondition(maps)
-		var cols []string
-		if len(d.Columns) > 0 {
-			cols = d.Columns
-		}
-		result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface(), cols...)
+		result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface())
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
 		} else {
