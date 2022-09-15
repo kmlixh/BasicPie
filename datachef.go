@@ -222,7 +222,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 				z = 1
 			}
 			totalPages = count/int64(pageSize) + z
-			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).Select(results, cols...)
+			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).OrderByDesc(orderByKey).Select(results, cols...)
 			if er != nil {
 				RenderJson(c, Err2(500, er.Error()))
 				return
