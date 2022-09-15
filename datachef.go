@@ -241,6 +241,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			} else {
 				RenderJson(c, Err())
 			}
+			return
 		}
 		var i interface{}
 		var er error
