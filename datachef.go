@@ -120,13 +120,13 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		}
 		results = reflect.New(reflect.SliceOf(d.Type)).Interface()
 		page := int64(0)
-		pageSize := int64(0)
+		pageSize := int64(20)
 		maps, er := GetCondtionMapFromRst(c)
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
 			return
 		}
-		orderByKey, ook := d.TableModel.Columns()[0], true
+		orderByKey := d.TableModel.Columns()[0]
 		orderByData, odk := maps["id"]
 		mode, otk := maps["mode"]
 		pSize, okp := maps["pageSize"]
@@ -159,11 +159,14 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		if er != nil {
 			pageSize = 20
 		}
+		if pageSize == 0 {
+			pageSize = 20
+		}
 		var cols []string
 		if len(d.Columns) > 0 {
 			cols = d.Columns
 		}
-		if ook && otk {
+		if otk {
 			//以排序值滚动获取数据
 			delete(maps, "id")
 			delete(maps, "mode")
