@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/kmlixh/twoFA"
 	"io"
 	"os"
 )
@@ -53,4 +54,23 @@ func GetPublicKey(path string) (*rsa.PublicKey, error) {
 	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes) //还原数据
 	publicKey := pubKey.(*rsa.PublicKey)
 	return publicKey, err
+}
+
+func TwoFaCodeCheck(secret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		code := c.GetHeader("Code")
+		if len(code) == 0 {
+			c.JSON(200, Err2(403, "oops"))
+			c.Abort()
+			return
+		}
+		result, er := twoFA.VerifyCode(secret, code)
+		if !result || er != nil {
+			c.JSON(200, Err2(403, "oops"))
+			c.Abort()
+		} else {
+			c.Next()
+		}
+
+	}
 }
