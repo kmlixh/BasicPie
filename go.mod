@@ -2,7 +2,7 @@ module github.com/kmlixh/basicPie
 
 go 1.19
 
-require github.com/kmlixh/gom/v2 v2.1.1
+require github.com/kmlixh/gom/v2 v2.1.3
 
 require (
 	github.com/gin-contrib/sse v0.1.0 // indirect

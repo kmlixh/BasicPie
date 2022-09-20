@@ -20,16 +20,17 @@ type DataChef struct {
 	Db         *gom.DB
 	BeforeSave
 	CustomSave
-	Columns []string
+	Columns  []string
+	OrderBys []gom.OrderBy
 }
 
-func GenerateChef(i interface{}, db *gom.DB, save BeforeSave, custom CustomSave, cols []string) *DataChef {
+func GenerateChef(i interface{}, db *gom.DB, save BeforeSave, custom CustomSave, cols []string, orderBys []gom.OrderBy) *DataChef {
 	typ := reflect.TypeOf(i)
 	model, er := gom.GetTableModel(i)
 	if er != nil {
 		panic(er)
 	}
-	return &DataChef{typ, model, db, save, custom, cols}
+	return &DataChef{typ, model, db, save, custom, cols, orderBys}
 }
 func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 	var maps map[string]interface{}
@@ -225,7 +226,14 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 				z = 1
 			}
 			totalPages = count/int64(pageSize) + z
-			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).OrderByDesc(orderByKey).Select(results, cols...)
+			var orderBys []gom.OrderBy
+			if d.OrderBys != nil {
+				orderBys = append(orderBys, d.OrderBys...)
+
+			} else {
+				orderBys = []gom.OrderBy{gom.MakeOrderBy(orderByKey, gom.Desc)}
+			}
+			_, er = d.Db.Where(cnd).Page(int64(page), int64(pageSize)).OrderBys(orderBys).Select(results, cols...)
 			if er != nil {
 				RenderJson(c, Err2(500, er.Error()))
 				return
