@@ -13,6 +13,7 @@ import (
 
 type BeforeSave func(c *gin.Context, i interface{}) (bool, interface{}, error)
 type CustomSave func(c *gin.Context) bool
+type CustomDetail func(c *gin.Context)
 
 type DataChef struct {
 	Type       reflect.Type
@@ -20,17 +21,18 @@ type DataChef struct {
 	Db         *gom.DB
 	BeforeSave
 	CustomSave
+	CustomDetail
 	Columns  []string
 	OrderBys []gom.OrderBy
 }
 
-func GenerateChef(i interface{}, db *gom.DB, save BeforeSave, custom CustomSave, cols []string, orderBys []gom.OrderBy) *DataChef {
+func GenerateChef(i interface{}, db *gom.DB, detail CustomDetail, save BeforeSave, custom CustomSave, cols []string, orderBys []gom.OrderBy) *DataChef {
 	typ := reflect.TypeOf(i)
 	model, er := gom.GetTableModel(i)
 	if er != nil {
 		panic(er)
 	}
-	return &DataChef{typ, model, db, save, custom, cols, orderBys}
+	return &DataChef{typ, model, db, save, custom, detail, cols, orderBys}
 }
 func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 	var maps map[string]interface{}
@@ -79,18 +81,23 @@ func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 
 func (d DataChef) Cook(route gin.IRoutes, name string) {
 	route.Any("/"+name+"/query", func(c *gin.Context) {
-		var result interface{}
-		maps, er := GetCondtionMapFromRst(c)
-		if er != nil {
-			RenderJson(c, Err2(500, er.Error()))
+		if d.CustomDetail != nil {
+			d.CustomDetail(c)
 			return
-		}
-		cnd := gom.MapToCondition(maps)
-		result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface())
-		if er != nil {
-			RenderJson(c, Err2(500, er.Error()))
 		} else {
-			RenderJson(c, Ok(result))
+			var result interface{}
+			maps, er := GetCondtionMapFromRst(c)
+			if er != nil {
+				RenderJson(c, Err2(500, er.Error()))
+				return
+			}
+			cnd := gom.MapToCondition(maps)
+			result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface())
+			if er != nil {
+				RenderJson(c, Err2(500, er.Error()))
+			} else {
+				RenderJson(c, Ok(result))
+			}
 		}
 	})
 	route.Any("/"+name+"/delete", func(c *gin.Context) {
@@ -227,7 +234,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			}
 			totalPages = count/int64(pageSize) + z
 			var orderBys []gom.OrderBy
-			if d.OrderBys != nil {
+			if d.OrderBys != nil && len(d.OrderBys) > 0 {
 				orderBys = append(orderBys, d.OrderBys...)
 
 			} else {
