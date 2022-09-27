@@ -261,11 +261,10 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 			}
 			return
 		}
-		var i interface{}
-		var er error
 		id := int64(0)
 		isInsert := false
-		i, er = d.defaultJsonParser(c)
+		i := reflect.New(d.Type).Interface()
+		er := c.ShouldBind(i)
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
 			return
@@ -290,18 +289,4 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 		}
 		RenderJson(c, Ok(id))
 	})
-}
-func (d DataChef) defaultJsonParser(c *gin.Context) (interface{}, error) {
-	i := reflect.New(d.Type).Interface()
-	if c.Request.Method == "POST" {
-		contentType := c.GetHeader("Content-Type")
-		if strings.Contains(contentType, "application/json") {
-			bbs, er := io.ReadAll(c.Request.Body)
-			if er != nil {
-				return nil, er
-			}
-			json.Unmarshal(bbs, i)
-		}
-	}
-	return i, nil
 }
