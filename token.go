@@ -3,6 +3,7 @@ package basicPie
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
@@ -17,8 +18,8 @@ type TokenDetail struct {
 	Expire   time.Duration
 }
 
-func (t TokenDetail) UnmarshalBinary(data []byte) error {
-	return json.Unmarshal(data, &t)
+func (t *TokenDetail) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, t)
 }
 
 func (t TokenDetail) MarshalBinary() (data []byte, err error) {
@@ -60,6 +61,9 @@ func (r RedisTokenStore) GetTokenDetail(token string) (TokenDetail, error) {
 	}
 	var detail TokenDetail
 	er := cmd.Scan(&detail)
+	if er != nil || detail.Token == "" {
+		return TokenDetail{}, errors.New("token not found")
+	}
 	return detail, er
 }
 
