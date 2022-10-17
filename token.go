@@ -2,6 +2,7 @@ package basicPie
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"strings"
@@ -89,6 +90,18 @@ func GenTokenForUser(userId string, userType string, expire time.Duration) (stri
 func CheckToken(token string) bool {
 	_, er := store.GetTokenDetail(token)
 	return er == nil
+}
+func CheckTokenGin(c *gin.Context) {
+	token := c.GetHeader("token")
+	if token == "" {
+		c.Abort()
+	} else {
+		if CheckToken(token) {
+			c.Next()
+		} else {
+			c.Abort()
+		}
+	}
 }
 func GetTokensOfUser(userId string, userType string) []string {
 	return store.GetTokensOfUser(userId, userType)
