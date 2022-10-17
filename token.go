@@ -46,6 +46,9 @@ func (r RedisTokenStore) GenerateToken(userId string, userType string) string {
 
 func (r RedisTokenStore) GetTokenDetail(token string) (TokenDetail, error) {
 	cmd := r.RedisClient.Get(context.Background(), "TOKEN_"+token)
+	if cmd.Err() != nil {
+		return TokenDetail{}, cmd.Err()
+	}
 	var detail TokenDetail
 	er := cmd.Scan(&detail)
 	return detail, er
@@ -97,6 +100,10 @@ func CheckTokenGin(c *gin.Context) {
 		c.Abort()
 	} else {
 		if CheckToken(token) {
+			detail, er := store.GetTokenDetail(token)
+			if er == nil && detail.UserId != "" {
+				c.Set("userId", detail.UserId)
+			}
 			c.Next()
 		} else {
 			c.Abort()
