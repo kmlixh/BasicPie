@@ -2,6 +2,7 @@ package basicPie
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
@@ -14,6 +15,14 @@ type TokenDetail struct {
 	UserId   string
 	UserType string
 	Expire   time.Duration
+}
+
+func (t TokenDetail) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, &t)
+}
+
+func (t TokenDetail) MarshalBinary() (data []byte, err error) {
+	return json.Marshal(t)
 }
 
 type TokenStore interface {
