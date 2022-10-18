@@ -56,3 +56,12 @@ func Err2(code int, msg string) CodeMsg {
 func RenderJson(c *gin.Context, data interface{}) {
 	c.JSON(200, data)
 }
+func RenderOk(c *gin.Context, data ...interface{}) {
+	c.JSON(200, Ok(data...))
+}
+func RenderErr(c *gin.Context) {
+	c.JSON(200, Err())
+}
+func RenderErr2(c *gin.Context, code int, msg string) {
+	c.JSON(200, Err2(code, msg))
+}
