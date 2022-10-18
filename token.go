@@ -110,6 +110,7 @@ func CheckToken(token string) bool {
 func CheckTokenGin(c *gin.Context) {
 	token := c.GetHeader("token")
 	if token == "" {
+		RenderJson(c, Err2(403, "unauthorized!"))
 		c.Abort()
 	} else {
 		if CheckToken(token) {
@@ -119,6 +120,7 @@ func CheckTokenGin(c *gin.Context) {
 			}
 			c.Next()
 		} else {
+			RenderJson(c, Err2(403, "unauthorized!"))
 			c.Abort()
 		}
 	}
