@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/kmlixh/twoFA"
 	"io"
+	"net/http"
 	"os"
 )
 
@@ -54,6 +55,14 @@ func GetPublicKey(path string) (*rsa.PublicKey, error) {
 	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes) //还原数据
 	publicKey := pubKey.(*rsa.PublicKey)
 	return publicKey, err
+}
+
+func InjectCodeIntoRst(secret string, rst *http.Request) (*http.Request, error) {
+	code, er := twoFA.GetCode(secret)
+	if er == nil {
+		rst.Header.Set("code", code)
+	}
+	return rst, er
 }
 
 func TwoFaCodeCheck(secret string) gin.HandlerFunc {
