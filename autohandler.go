@@ -15,24 +15,45 @@ type BeforeSave func(c *gin.Context, i interface{}) (bool, interface{}, error)
 type CustomSave func(c *gin.Context) bool
 type CustomDetail func(c *gin.Context)
 
-type DataChef struct {
+type Operator int
+
+const (
+	_ Operator = iota
+	Le
+	Lt
+	Ge
+	Gt
+	Eq
+	Like
+	LikeLeft
+	LikeRight
+)
+
+type QueryCnd struct {
+	QueryName string
+	InnerName string
+	Operator
+}
+
+type AutoRequestHandler struct {
 	Type       reflect.Type
 	TableModel gom.TableModel
 	Db         *gom.DB
 	BeforeSave
 	CustomSave
 	CustomDetail
-	Columns  []string
-	OrderBys []gom.OrderBy
+	Columns   []string
+	QueryCnds []QueryCnd
+	OrderBys  []gom.OrderBy
 }
 
-func GenerateChef(i interface{}, db *gom.DB, detail CustomDetail, save BeforeSave, custom CustomSave, cols []string, orderBys []gom.OrderBy) *DataChef {
+func CreateHandler(i interface{}, db *gom.DB, detail CustomDetail, save BeforeSave, custom CustomSave, cols []string, orderBys []gom.OrderBy) *AutoRequestHandler {
 	typ := reflect.TypeOf(i)
 	model, er := gom.GetTableModel(i)
 	if er != nil {
 		panic(er)
 	}
-	return &DataChef{typ, model, db, save, custom, detail, cols, orderBys}
+	return &AutoRequestHandler{typ, model, db, save, custom, detail, cols, nil, orderBys}
 }
 func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 	var maps map[string]interface{}
@@ -79,7 +100,7 @@ func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 
 }
 
-func (d DataChef) Cook(route gin.IRoutes, name string) {
+func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
 	route.Any("/"+name+"/query", func(c *gin.Context) {
 		if d.CustomDetail != nil {
 			d.CustomDetail(c)
@@ -189,7 +210,7 @@ func (d DataChef) Cook(route gin.IRoutes, name string) {
 				cnd.Lt(orderByKey, orderByData)
 			}
 
-			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, int64(pageSize)).Select(results, cols...)
+			d.Db.Where(cnd).OrderBy(orderByKey, orderType).Page(0, pageSize).Select(results, cols...)
 			RenderJson(c, Ok(results).Set("pageSize", pageSize))
 		} else {
 			pTxt, ok := maps["page"]
