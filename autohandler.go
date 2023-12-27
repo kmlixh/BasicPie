@@ -11,14 +11,48 @@ import (
 	"strings"
 )
 
-type BeforeSave func(c *gin.Context, i interface{}) (bool, interface{}, error)
-type CustomSave func(c *gin.Context) bool
-type CustomDetail func(c *gin.Context)
+type FilterFunc func(chain FilterChain, handler AutoRequestHandler, context *gin.Context) (bool, error, interface{})
 
-type Operator int
+type FilterChain struct {
+	filterMap map[CrudType][]Filter
+}
+
+func (f FilterChain) runFilters(handler AutoRequestHandler, crudType CrudType, context *gin.Context) (bool, error, interface{}) {
+	filters := f.filterMap[crudType]
+	if filters == nil || len(filters) == 0 {
+		return true, nil, nil
+	}
+	for idx, filter := range filters {
+		b, e, i := filter.filterFunc(f, handler, context)
+		if !b || idx == len(filters)-1 {
+			return b, e, i
+		}
+	}
+	return true, nil, nil
+}
+
+func filtersToFilterChain(filters []Filter) *FilterChain {
+	maps := make(map[CrudType][]Filter)
+	for _, f := range filters {
+		groupFilters := maps[f.CrudType]
+		if groupFilters == nil {
+			groupFilters = make([]Filter, 0)
+			groupFilters = append(groupFilters, f)
+			maps[f.CrudType] = groupFilters
+		}
+	}
+	return &FilterChain{maps}
+}
+
+type Filter struct {
+	CrudType
+	filterFunc FilterFunc
+}
+
+type QueryOperator int
 
 const (
-	_ Operator = iota
+	_ QueryOperator = iota
 	Le
 	Lt
 	Ge
@@ -29,33 +63,44 @@ const (
 	LikeRight
 )
 
+type CrudType int
+
+const (
+	_ CrudType = iota
+	BeforeQuery
+	DoQuery
+	AfterQuery
+	BeforeQuerySingle
+	DoQuerySingle
+	AfterQuerySingle
+	BeforeUpdate
+	DoUpdate
+	AfterUpdate
+	BeforeInsert
+	DoInsert
+	AfterInsert
+	BeforeDelete
+	DoDelete
+	AfterDelete
+)
+
 type QueryCnd struct {
 	QueryName string
 	InnerName string
-	Operator
+	QueryOperator
 }
 
 type AutoRequestHandler struct {
-	Type       reflect.Type
-	TableModel gom.TableModel
-	Db         *gom.DB
-	BeforeSave
-	CustomSave
-	CustomDetail
-	Columns   []string
+	Db        *gom.DB
+	FilterMap map[CrudType]Filter
 	QueryCnds []QueryCnd
-	OrderBys  []gom.OrderBy
 }
 
-func CreateHandler(i interface{}, db *gom.DB, detail CustomDetail, save BeforeSave, custom CustomSave, cols []string, orderBys []gom.OrderBy) *AutoRequestHandler {
-	typ := reflect.TypeOf(i)
-	model, er := gom.GetTableModel(i)
-	if er != nil {
-		panic(er)
-	}
-	return &AutoRequestHandler{typ, model, db, save, custom, detail, cols, nil, orderBys}
+func CreateHandler(i interface{}, db *gom.DB, filters []Filter) *AutoRequestHandler {
+
+	return &AutoRequestHandler{db, nil, nil}
 }
-func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
+func GetConditionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 	var maps map[string]interface{}
 	var er error
 	if c.Request.Method == "POST" {
@@ -100,6 +145,10 @@ func GetCondtionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
 
 }
 
+func (d AutoRequestHandler) getConditionFromMap(maps map[string]interface{}) gom.Condition {
+
+}
+
 func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
 	route.Any("/"+name+"/query", func(c *gin.Context) {
 		if d.CustomDetail != nil {
@@ -107,12 +156,12 @@ func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
 			return
 		} else {
 			var result interface{}
-			maps, er := GetCondtionMapFromRst(c)
+			maps, er := GetConditionMapFromRst(c)
 			if er != nil {
 				RenderJson(c, Err2(500, er.Error()))
 				return
 			}
-			cnd := gom.MapToCondition(maps)
+			cnd := d.getConditionFromMap(maps)
 			result, er = d.Db.Where(cnd).Select(reflect.New(d.Type).Interface())
 			if er != nil {
 				RenderJson(c, Err2(500, er.Error()))
@@ -122,7 +171,7 @@ func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
 		}
 	})
 	route.Any("/"+name+"/delete", func(c *gin.Context) {
-		maps, er := GetCondtionMapFromRst(c)
+		maps, er := GetConditionMapFromRst(c)
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
 			return
@@ -150,7 +199,7 @@ func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
 		results = reflect.New(reflect.SliceOf(d.Type)).Interface()
 		page := int64(0)
 		pageSize := int64(20)
-		maps, er := GetCondtionMapFromRst(c)
+		maps, er := GetConditionMapFromRst(c)
 		if er != nil {
 			RenderJson(c, Err2(500, er.Error()))
 			return
