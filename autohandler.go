@@ -63,25 +63,13 @@ const (
 	LikeRight
 )
 
-type CrudType int
+type FilterType int
 
 const (
-	_ CrudType = iota
-	BeforeQuery
-	DoQuery
-	AfterQuery
-	BeforeQuerySingle
-	DoQuerySingle
-	AfterQuerySingle
-	BeforeUpdate
-	DoUpdate
-	AfterUpdate
-	BeforeInsert
-	DoInsert
-	AfterInsert
-	BeforeDelete
-	DoDelete
-	AfterDelete
+	_ FilterType = iota
+	Before
+
+	After
 )
 
 type QueryCnd struct {
@@ -150,7 +138,7 @@ func (d AutoRequestHandler) getConditionFromMap(maps map[string]interface{}) gom
 }
 
 func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
-	route.Any("/"+name+"/query", func(c *gin.Context) {
+	route.A ny("/"+name+"/query", func(c *gin.Context) {
 		if d.CustomDetail != nil {
 			d.CustomDetail(c)
 			return
