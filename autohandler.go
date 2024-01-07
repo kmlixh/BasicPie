@@ -1,14 +1,10 @@
 package basicPie
 
 import (
-	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/kmlixh/gom/v2"
-	"io"
-	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 type FilterFunc func(chain FilterChain, handler AutoRequestHandler, context *gin.Context) (bool, error, interface{})
@@ -88,57 +84,13 @@ func CreateHandler(i interface{}, db *gom.DB, filters []Filter) *AutoRequestHand
 
 	return &AutoRequestHandler{db, nil, nil}
 }
-func GetConditionMapFromRst(c *gin.Context) (map[string]interface{}, error) {
-	var maps map[string]interface{}
-	var er error
-	if c.Request.Method == "POST" {
-		contentType := c.GetHeader("Content-Type")
-		if strings.Contains(contentType, "application/x-www-form-urlencoded") {
-			maps = make(map[string]interface{})
-			er = c.Request.ParseForm()
-			if er != nil {
-				return nil, er
-			}
-			values := c.Request.Form
-			for k, v := range values {
-				if len(v) == 1 {
-					maps[k] = v[0]
-				} else {
-					maps[k] = v
-				}
-			}
-
-		} else if strings.Contains(contentType, "application/json") {
-			bbs, er := io.ReadAll(c.Request.Body)
-			if er != nil {
-				return nil, er
-			}
-			er = json.Unmarshal(bbs, &maps)
-		}
-	} else if c.Request.Method == http.MethodGet {
-		maps = make(map[string]interface{})
-		values := c.Request.URL.Query()
-		for k, v := range values {
-			if len(v) == 1 {
-				maps[k] = v[0]
-			} else {
-				maps[k] = v
-			}
-		}
-	}
-	if er != nil {
-		return nil, er
-	}
-	return maps, nil
-
-}
 
 func (d AutoRequestHandler) getConditionFromMap(maps map[string]interface{}) gom.Condition {
 
 }
 
 func (d AutoRequestHandler) Handle(route gin.IRoutes, name string) {
-	route.A ny("/"+name+"/query", func(c *gin.Context) {
+	route.Any("/"+name+"/query", func(c *gin.Context) {
 		if d.CustomDetail != nil {
 			d.CustomDetail(c)
 			return
